@@ -1,0 +1,25 @@
+name: list-versions
+on:
+  workflow_dispatch:
+    inputs: {}
+  schedule:
+    - cron: '0 0 * * *'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - run: echo "PATH=$PWD/.akoi/bin:$PATH" >> $GITHUB_ENV
+      - name: Install akoi
+        uses: suzuki-shunsuke/akoi-installer@v0.1.0
+      - run: akoi install
+
+      - run: aws --region us-east-1 elasticache describe-cache-engine-versions --engine redis | jq -r ".CacheEngineVersions[].EngineVersion" | uniq > versions.txt
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - uses: suzuki-shunsuke/github-actions-aws-rds-available-engine-versions@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
